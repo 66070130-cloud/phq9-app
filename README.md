@@ -10,23 +10,27 @@
 ผู้ใช้อัดเสียงตอบ PHQ-9
         ↓
 ┌──────────────────────────────────────────┐
-│  Whisper (model.safetensors)             │
+│  Whisper (fine-tuned Thai PHQ-9)         │
 │  → Transcribe เสียง → ข้อความไทย        │
-│  → Map คำตอบ → คะแนน PHQ-9             │
+│  → Keyword Match → คะแนน PHQ-9          │
 └──────────────────────────────────────────┘
         +
 ┌──────────────────────────────────────────┐
 │  AudioOnlyModel (best_model.pt)          │
-│  → Wav2Vec2 classify โทนเสียง           │
-│  → Depression probability (0-1)          │
+│  → Wav2Vec2 สกัด features (T, 768)      │
+│  → แบ่ง 16 segments → TransformerEncoder│
+│  → 4-class: ไม่เลย/บางวัน/มากกว่าครึ่ง/แทบทุกวัน
+│  → Weighted depression score (0-1)       │
 └──────────────────────────────────────────┘
         ↓
-  รวมคะแนน PHQ-9 (70%) + โทนเสียง (30%)
+  Combined Score = PHQ-9 (70%) + โทนเสียง (30%)
+  ซึมเศร้า ถ้า combined_score > 0.37
         ↓
 ┌──────────────────────────────────────────┐
-│  Gemini API                              │
+│  Gemini API (ใช้เฉพาะตรงนี้เท่านั้น)    │
 │  → สร้างข้อความฮีลใจ personalized       │
-│  → คำแนะนำตามระดับความรุนแรง            │
+│  → กิจกรรมแนะนำตามระดับความรุนแรง      │
+│  → คำคมฮีลใจ                            │
 └──────────────────────────────────────────┘
         ↓
   แสดงผล: ระดับ + คะแนน + คำแนะนำ + ฮีลใจ
@@ -37,97 +41,52 @@
 ## 🗂️ โครงสร้างโปรเจกต์
 
 ```
-phq9-depression-app/
+project_mlops/
 ├── backend/
 │   ├── main.py              # FastAPI application
-│   ├── audio_model.py       # AudioOnlyModel (Wav2Vec2) definition
+│   ├── audio_model.py       # AudioOnlyModel (Wav2Vec2 + TransformerEncoder)
 │   └── requirements.txt
 ├── frontend/
 │   └── index.html           # Single-page application
 ├── models/                  # ← วาง model files ที่นี่
-│   ├── best_model.pt        # AudioOnlyModel weights
-│   └── whisper/             # Whisper fine-tuned directory
+│   ├── best_model.pt        # AudioOnlyModel weights (4-class)
+│   └── whisper/             # Whisper fine-tuned Thai PHQ-9
 │       ├── model.safetensors
 │       ├── config.json
 │       ├── tokenizer.json
-│       └── ...
+│       ├── tokenizer_config.json
+│       ├── vocab.json
+│       ├── merges.txt
+│       ├── normalizer.json
+│       ├── added_tokens.json
+│       ├── preprocessor_config.json
+│       ├── processor_config.json
+│       └── generation_config.json
 ├── Dockerfile
-├── docker-compose.yml
-├── .env.example
 └── README.md
 ```
 
 ---
 
-## 🚀 วิธี Deploy
-
-### Prerequisites
-
-- Docker & Docker Compose
-- Google Cloud SDK (`gcloud`)
-- Gemini API Key จาก [Google AI Studio](https://aistudio.google.com)
-
-### 1. วาง Model Files
+## 🚀 วิธี Deploy บน Google Cloud Run
 
 ```bash
-# สร้างโฟลเดอร์ models
-mkdir -p models/whisper
+# Build image
+docker build --platform linux/amd64 -t gcr.io/<PROJECT_ID>/phq9-app .
 
-# วาง best_model.pt ใน models/
-cp /path/to/best_model.pt models/
+# Push to GCR
+docker push gcr.io/<PROJECT_ID>/phq9-app
 
-# วาง Whisper fine-tuned files ใน models/whisper/
-cp /path/to/whisper/* models/whisper/
-```
-
-### 2. รันแบบ Local (Docker Compose)
-
-```bash
-# Copy .env
-cp .env.example .env
-# แก้ไข GEMINI_API_KEY ใน .env
-
-# Build และรัน
-docker-compose up --build
-
-# เปิดเบราว์เซอร์
-open http://localhost:8080
-```
-
-### 3. Deploy บน Google Cloud Run
-
-```bash
-# ตั้งค่า project
-export PROJECT_ID="your-gcp-project-id"
-export REGION="asia-southeast1"
-export SERVICE_NAME="phq9-app"
-
-# Login
-gcloud auth login
-gcloud config set project $PROJECT_ID
-
-# Enable APIs
-gcloud services enable run.googleapis.com
-gcloud services enable artifactregistry.googleapis.com
-
-# สร้าง Artifact Registry
-gcloud artifacts repositories create phq9-repo \
-  --repository-format=docker \
-  --location=$REGION
-
-# Build & Push image
-gcloud builds submit --tag $REGION-docker.pkg.dev/$PROJECT_ID/phq9-repo/$SERVICE_NAME
-
-# Deploy to Cloud Run
-gcloud run deploy $SERVICE_NAME \
-  --image $REGION-docker.pkg.dev/$PROJECT_ID/phq9-repo/$SERVICE_NAME \
+# Deploy
+gcloud run deploy phq9-app \
+  --image gcr.io/<PROJECT_ID>/phq9-app \
   --platform managed \
-  --region $REGION \
+  --region asia-southeast1 \
   --allow-unauthenticated \
-  --memory 4Gi \
-  --cpu 2 \
+  --memory 8Gi \
+  --cpu 4 \
   --timeout 300 \
-  --set-env-vars GEMINI_API_KEY=your_key_here
+  --set-env-vars GEMINI_API_KEY=<YOUR_KEY>
 ```
 
 ---
@@ -137,15 +96,15 @@ gcloud run deploy $SERVICE_NAME \
 | Method | Endpoint | Description |
 |--------|----------|-------------|
 | GET | `/api/questions` | ดึงคำถาม PHQ-9 ทั้ง 9 ข้อ |
-| POST | `/api/transcribe` | อัปโหลด audio → transcribe → map คำตอบ |
-| POST | `/api/classify-audio` | อัปโหลด audio → classify โทนเสียง |
-| POST | `/api/analyze` | รวมคะแนน + วิเคราะห์ + สร้างข้อความ |
+| POST | `/api/transcribe` | audio → Whisper → keyword match → คะแนน |
+| POST | `/api/classify-audio` | audio → Wav2Vec2 → AudioOnlyModel → 4-class |
+| POST | `/api/analyze` | รวมคะแนน + Gemini healing message |
 | GET | `/health` | Health check |
 
 ### POST /api/transcribe
 
 ```bash
-curl -X POST http://localhost:8080/api/transcribe \
+curl -X POST https://<SERVICE_URL>/api/transcribe \
   -F "audio=@recording.webm"
 ```
 
@@ -161,7 +120,7 @@ Response:
 ### POST /api/classify-audio
 
 ```bash
-curl -X POST http://localhost:8080/api/classify-audio \
+curl -X POST https://<SERVICE_URL>/api/classify-audio \
   -F "audio=@recording.webm"
 ```
 
@@ -182,7 +141,7 @@ Response:
 ### POST /api/analyze
 
 ```bash
-curl -X POST http://localhost:8080/api/analyze \
+curl -X POST https://<SERVICE_URL>/api/analyze \
   -H "Content-Type: application/json" \
   -d '{
     "phq_scores": [1,2,0,1,0,1,2,0,0],
@@ -202,19 +161,20 @@ curl -X POST http://localhost:8080/api/analyze \
 | 15–19 | ซึมเศร้าระดับค่อนข้างรุนแรง |
 | 20–27 | ซึมเศร้าระดับรุนแรง |
 
-**Combined Score** = PHQ-9 normalized × 0.7 + Audio depression prob × 0.3
+**Combined Score** = (PHQ-9 / 27) × 0.7 + Audio depression prob × 0.3
+**Weighted Score** = p0×0 + p1×0.33 + p2×0.67 + p3×1.0
 
 ---
 
 ## 🛠️ Tech Stack
 
-- **Frontend**: Vanilla HTML/CSS/JS (Single Page, ไม่ต้อง build)
-- **Backend**: FastAPI (Python)
-- **Speech-to-Text**: Whisper fine-tuned Thai (`model.safetensors`)
-- **Audio Classifier**: Wav2Vec2-based (`best_model.pt`)
-- **Healing Message**: Google Gemini 1.5 Flash
-- **Container**: Docker
-- **Cloud**: Google Cloud Run
+- **Frontend**: Vanilla HTML/CSS/JS
+- **Backend**: FastAPI (Python 3.11)
+- **Speech-to-Text**: Whisper fine-tuned Thai PHQ-9
+- **Audio Classifier**: Wav2Vec2 + TransformerEncoder (4-class)
+- **Healing Message**: Google Gemini 1.5 Flash Latest
+- **Container**: Docker (2-stage build, linux/amd64)
+- **Cloud**: Google Cloud Run (asia-southeast1, 8Gi RAM, 4 CPU)
 
 ---
 
