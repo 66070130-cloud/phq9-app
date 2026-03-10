@@ -1,0 +1,20 @@
+# Secrets
+.env
+
+# Python
+__pycache__/
+*.pyc
+
+# Models
+models/*.pt
+models/*.safetensors
+models/whisper/
+
+# OS
+.DS_Store
+
+# Editor
+.vscode/
+
+# Logs
+*.log

@@ -1,0 +1,530 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>ประเมินสุขภาพจิต PHQ-9</title>
+<link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&family=Noto+Serif+Thai:wght@400;600;700&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --bg: #f5f3ff; --surface: #ffffff; --surface2: #ede9fe;
+    --border: #ddd6fe; --accent: #6d52e8; --accent2: #8b5cf6;
+    --accent-glow: rgba(109,82,232,0.18); --text: #1e1b4b;
+    --text-muted: #6b7280; --green: #059669; --yellow: #d97706;
+    --orange: #ea580c; --red: #dc2626; --crimson: #b91c1c;
+    --r1: 16px; --r2: 24px;
+  }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Sarabun', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; overflow-x: hidden; }
+  body::before {
+    content: ''; position: fixed; inset: 0; z-index: 0;
+    background:
+      radial-gradient(ellipse 70% 50% at 15% -5%, rgba(196,181,253,0.35) 0%, transparent 55%),
+      radial-gradient(ellipse 55% 45% at 85% 105%, rgba(167,139,250,0.2) 0%, transparent 50%),
+      radial-gradient(ellipse 40% 30% at 55% 50%, rgba(245,243,255,0.5) 0%, transparent 60%);
+    pointer-events: none;
+  }
+  .container { position: relative; z-index: 1; max-width: 760px; margin: 0 auto; padding: 32px 20px 80px; }
+
+  .header { text-align: center; margin-bottom: 48px; }
+  .header-badge { display: inline-flex; align-items: center; gap: 8px; background: rgba(124,106,247,0.12); border: 1px solid rgba(124,106,247,0.3); border-radius: 999px; padding: 6px 16px; font-size: 13px; color: var(--accent2); letter-spacing: 0.5px; margin-bottom: 20px; }
+  .header h1 { font-family: 'Noto Serif Thai', serif; font-size: clamp(26px, 5vw, 38px); font-weight: 700; line-height: 1.3; color: var(--text); margin-bottom: 12px; }
+  .header h1 span { color: var(--accent2); }
+  .header p { color: var(--text-muted); font-size: 15px; line-height: 1.7; max-width: 500px; margin: 0 auto; }
+
+  .progress-wrap { margin-bottom: 36px; }
+  .progress-info { display: flex; justify-content: space-between; font-size: 13px; color: var(--text-muted); margin-bottom: 10px; }
+  .progress-bar-bg { height: 6px; background: var(--surface2); border-radius: 99px; overflow: hidden; }
+  .progress-bar-fill { height: 100%; background: linear-gradient(90deg, var(--accent), var(--accent2)); border-radius: 99px; transition: width 0.5s cubic-bezier(.4,0,.2,1); }
+  .progress-dots { display: flex; gap: 6px; justify-content: center; margin-top: 14px; flex-wrap: wrap; }
+  .progress-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--surface2); transition: all 0.3s; }
+  .progress-dot.done { background: var(--accent); }
+  .progress-dot.active { background: var(--accent2); transform: scale(1.4); box-shadow: 0 0 8px var(--accent-glow); }
+
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r2); padding: 32px 28px; margin-bottom: 20px; transition: box-shadow 0.3s; }
+  .card:hover { box-shadow: 0 8px 40px rgba(109,82,232,0.10); }
+
+  .question-num { font-size: 12px; font-weight: 600; letter-spacing: 1.5px; text-transform: uppercase; color: var(--accent); margin-bottom: 10px; }
+  .question-text { font-family: 'Noto Serif Thai', serif; font-size: 18px; font-weight: 600; line-height: 1.6; color: var(--text); margin-bottom: 28px; }
+
+  .answers-hint { margin-bottom: 28px; }
+  .answers-hint-label { font-size: 11px; font-weight: 600; letter-spacing: 1.2px; text-transform: uppercase; color: var(--text-muted); margin-bottom: 12px; }
+  .answers-chips { display: flex; flex-wrap: wrap; gap: 10px; }
+  .answer-chip { display: inline-flex; align-items: center; gap: 8px; padding: 8px 16px; border-radius: 99px; border: 1px solid var(--border); background: var(--surface2); color: var(--text-muted); font-size: 14px; pointer-events: none; user-select: none; transition: all 0.4s; }
+  .answer-chip .chip-score { font-size: 11px; font-weight: 700; background: var(--surface); border-radius: 50%; width: 20px; height: 20px; display: flex; align-items: center; justify-content: center; color: var(--text-muted); }
+  .answer-chip.highlighted { border-color: var(--green); background: rgba(74,222,128,0.12); color: var(--green); box-shadow: 0 0 0 3px rgba(74,222,128,0.15); animation: pulse-green 1s ease; }
+  .answer-chip.highlighted .chip-score { background: var(--green); color: #fff; }
+  @keyframes pulse-green { 0%{box-shadow:0 0 0 0 rgba(74,222,128,0.4)} 70%{box-shadow:0 0 0 10px rgba(74,222,128,0)} 100%{box-shadow:0 0 0 3px rgba(74,222,128,0.15)} }
+
+  .record-section { border: 1.5px dashed var(--border); border-radius: var(--r1); padding: 20px; background: #faf9ff; }
+  .record-label { font-size: 13px; color: var(--text-muted); margin-bottom: 14px; line-height: 1.7; }
+  .record-label strong { color: var(--accent); font-weight: 700; }
+  .record-label em { color: var(--text); font-style: normal; background: var(--surface2); padding: 1px 6px; border-radius: 6px; font-size: 12px; }
+
+  /* countdown bar */
+  .countdown-bar-wrap { height: 4px; background: var(--surface2); border-radius: 99px; margin-bottom: 12px; overflow: hidden; display: none; }
+  .countdown-bar-wrap.active { display: block; }
+  .countdown-bar { height: 100%; background: linear-gradient(90deg, var(--accent), var(--accent2)); border-radius: 99px; width: 100%; }
+
+  .record-controls { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+  .btn-record { display: flex; align-items: center; gap: 8px; padding: 10px 20px; border-radius: 99px; border: none; background: linear-gradient(135deg, var(--accent), var(--accent2)); color: white; font-family: 'Sarabun', sans-serif; font-size: 14px; font-weight: 600; cursor: pointer; transition: all 0.25s; box-shadow: 0 4px 16px rgba(124,106,247,0.3); min-width: 165px; justify-content: center; }
+  .btn-record:hover { transform: translateY(-1px); box-shadow: 0 6px 24px rgba(124,106,247,0.4); }
+  .btn-record.recording { background: linear-gradient(135deg, #ef4444, #f87171); box-shadow: 0 4px 16px rgba(239,68,68,0.4); animation: record-pulse 1.5s infinite; }
+  @keyframes record-pulse { 0%,100%{box-shadow:0 4px 16px rgba(239,68,68,0.4)} 50%{box-shadow:0 4px 24px rgba(239,68,68,0.7)} }
+  @keyframes pulse-hint { 0%,100%{transform:scale(1)} 50%{transform:scale(1.08);box-shadow:0 0 0 6px rgba(109,82,232,0.25)} }
+  .btn-record.pulse-hint { animation: pulse-hint 0.4s ease 3; }
+  .rec-dot { width: 10px; height: 10px; border-radius: 50%; background: white; }
+  .recording .rec-dot { animation: blink 1s infinite; }
+  @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.2} }
+
+  .transcribed-box { flex: 1; min-width: 160px; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 10px 14px; font-size: 14px; color: var(--text); min-height: 42px; display: flex; align-items: center; transition: border-color 0.3s; }
+  .transcribed-box.has-text { border-color: rgba(124,106,247,0.4); }
+  .transcribed-box .placeholder { color: var(--text-muted); font-style: italic; }
+
+  .audio-waveform { display: none; align-items: center; gap: 3px; height: 28px; }
+  .audio-waveform.active { display: flex; }
+  .wave-bar { width: 3px; border-radius: 99px; background: var(--accent); animation: wave-anim 0.8s ease-in-out infinite alternate; }
+  .wave-bar:nth-child(1){height:8px;animation-delay:0s} .wave-bar:nth-child(2){height:16px;animation-delay:0.1s}
+  .wave-bar:nth-child(3){height:22px;animation-delay:0.2s} .wave-bar:nth-child(4){height:14px;animation-delay:0.3s}
+  .wave-bar:nth-child(5){height:20px;animation-delay:0.15s} .wave-bar:nth-child(6){height:10px;animation-delay:0.25s}
+  .wave-bar:nth-child(7){height:18px;animation-delay:0.05s}
+  @keyframes wave-anim { from{transform:scaleY(0.4)} to{transform:scaleY(1)} }
+
+  .action-row { display: flex; gap: 12px; justify-content: flex-end; margin-top: 20px; }
+  .btn-secondary { padding: 10px 20px; border-radius: 10px; border: 1.5px solid var(--border); background: transparent; color: var(--text-muted); font-family: 'Sarabun', sans-serif; font-size: 14px; cursor: pointer; transition: all 0.2s; }
+  .btn-secondary:hover { border-color: var(--accent); color: var(--text); }
+  .btn-primary { padding: 10px 28px; border-radius: 10px; border: none; background: linear-gradient(135deg, var(--accent), var(--accent2)); color: white; font-family: 'Sarabun', sans-serif; font-size: 14px; font-weight: 600; cursor: pointer; transition: all 0.25s; box-shadow: 0 4px 16px rgba(124,106,247,0.25); display: flex; align-items: center; gap: 6px; }
+  .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 6px 24px rgba(124,106,247,0.4); }
+  .btn-primary:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+
+  .loading-overlay { position: fixed; inset: 0; z-index: 100; background: rgba(245,243,255,0.88); backdrop-filter: blur(8px); display: none; flex-direction: column; align-items: center; justify-content: center; gap: 20px; }
+  .loading-overlay.active { display: flex; }
+  .spinner { width: 52px; height: 52px; border-radius: 50%; border: 3px solid var(--border); border-top-color: var(--accent); animation: spin 0.8s linear infinite; }
+  @keyframes spin { to{transform:rotate(360deg)} }
+  .loading-text { font-size: 15px; color: var(--text-muted); }
+
+  .result-hidden { display: none !important; }
+  .result-header { text-align: center; padding: 40px 0 32px; }
+  .result-emoji { font-size: 64px; margin-bottom: 16px; }
+  .result-level { font-family: 'Noto Serif Thai', serif; font-size: 26px; font-weight: 700; margin-bottom: 8px; }
+  .scores-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin-bottom: 24px; }
+  @media (max-width: 480px) { .scores-row { grid-template-columns: 1fr; } }
+  .score-box { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r1); padding: 16px; text-align: center; }
+  .score-box-num { font-size: 32px; font-weight: 700; font-family: 'Noto Serif Thai', serif; margin-bottom: 4px; }
+  .score-box-label { font-size: 12px; color: var(--text-muted); }
+  .result-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r2); padding: 28px; margin-bottom: 16px; }
+  .result-card-title { font-size: 11px; letter-spacing: 1.5px; text-transform: uppercase; color: var(--accent); font-weight: 600; margin-bottom: 12px; display: flex; align-items: center; gap: 8px; }
+  .result-card-body { font-size: 15px; line-height: 1.9; color: var(--text); white-space: pre-line; }
+  .heal-card { border-color: rgba(109,82,232,0.2); background: linear-gradient(135deg, rgba(237,233,254,0.7), rgba(245,243,255,0.5)); position: relative; overflow: hidden; }
+  .heal-card::before { content: '✨'; position: absolute; top: -10px; right: -10px; font-size: 80px; opacity: 0.07; }
+  .rec-card { border-color: rgba(5,150,105,0.2); background: rgba(236,253,245,0.6); }
+  .hotline-box { background: rgba(254,242,242,0.8); border: 1px solid rgba(220,38,38,0.2); border-radius: var(--r1); padding: 16px 20px; margin-top: 16px; display: flex; align-items: center; gap: 12px; }
+  .hotline-num { font-size: 28px; font-weight: 700; color: var(--red); font-family: 'Noto Serif Thai', serif; }
+  .hotline-text { font-size: 13px; color: var(--text-muted); line-height: 1.5; }
+  .btn-restart { width: 100%; padding: 14px; border-radius: var(--r1); border: 1.5px solid var(--border); background: transparent; color: var(--text-muted); font-family: 'Sarabun', sans-serif; font-size: 15px; cursor: pointer; margin-top: 12px; transition: all 0.2s; }
+  .btn-restart:hover { border-color: var(--accent2); color: var(--text); }
+  .fade-in { animation: fadeIn 0.4s ease; }
+  @keyframes fadeIn { from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:translateY(0)} }
+  .toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); background: var(--surface2); border: 1px solid var(--border); border-radius: 99px; padding: 10px 22px; font-size: 14px; color: var(--text); opacity: 0; pointer-events: none; transition: opacity 0.3s; z-index: 200; white-space: nowrap; }
+  .toast.show { opacity: 1; }
+  .analysis-tag { display: inline-flex; align-items: center; gap: 6px; background: rgba(109,82,232,0.08); border: 1px solid rgba(109,82,232,0.2); border-radius: 99px; padding: 4px 12px; font-size: 12px; color: var(--accent); margin-top: 8px; }
+</style>
+</head>
+<body>
+
+<div class="loading-overlay" id="loadingOverlay">
+  <div class="spinner"></div>
+  <div class="loading-text" id="loadingText">กำลังวิเคราะห์เสียง...</div>
+</div>
+<div class="toast" id="toast"></div>
+
+<div class="container">
+  <div id="quizSection">
+    <div class="header fade-in">
+      <div class="header-badge">🧠 AI Mental Health Screening</div>
+      <h1>SpeechDepreDetect</h1>
+      <p>ในช่วง <strong>2 สัปดาห์</strong>ที่ผ่านมา ท่านมีอาการดังต่อไปนี้บ่อยแค่ไหน?<br/>กดอัดเสียงแล้วอ่านคำถามพร้อมตอบในคลิปเดียว</p>
+    </div>
+
+    <div class="progress-wrap fade-in">
+      <div class="progress-info">
+        <span id="progressLabel">ข้อที่ 1 / 9</span>
+        <span id="progressPct">0%</span>
+      </div>
+      <div class="progress-bar-bg"><div class="progress-bar-fill" id="progressFill" style="width:0%"></div></div>
+      <div class="progress-dots" id="progressDots"></div>
+    </div>
+
+    <div class="card fade-in" id="questionCard">
+      <div class="question-num" id="questionNum">ข้อที่ 1</div>
+      <div style="font-size:13px;color:var(--text-muted);margin-bottom:8px;">ในช่วง <strong>2 สัปดาห์</strong>ที่ผ่านมา ท่านมีอาการนี้บ่อยแค่ไหน?</div>
+      <div class="question-text" id="questionText"></div>
+
+      <div class="answers-hint">
+        <div class="answers-hint-label">ตัวเลือกคำตอบ</div>
+        <div class="answers-chips" id="answersChips"></div>
+      </div>
+
+      <div class="record-section">
+        <div class="record-label">
+          🎙️ กด <strong>อัดเสียง</strong> แล้ว<strong>อ่านคำถามพร้อมตอบในคลิปเดียว</strong> เช่น<br/>
+          <em>"รู้สึกหดหู่ ซึมเศร้า... บางวัน"</em><br/>
+          ⚠️ ต้องอ่านคำถามด้วย ห้ามตอบอย่างเดียว — หยุดอัตโนมัติใน 10 วินาที<br/>
+          📌 อัดได้หลายรอบ ทุก clip จะถูกเก็บและวิเคราะห์โทนเสียงรวมกันตอนสรุปผล
+        </div>
+
+        <div class="countdown-bar-wrap" id="countdownWrap">
+          <div class="countdown-bar" id="countdownBar"></div>
+        </div>
+
+        <div class="record-controls">
+          <button class="btn-record" id="recordBtn" onclick="toggleRecord()">
+            <span class="rec-dot"></span>
+            <span id="recordLabel">🎙️ กดเพื่ออัดเสียง</span>
+          </button>
+          <div class="audio-waveform" id="waveform">
+            <div class="wave-bar"></div><div class="wave-bar"></div><div class="wave-bar"></div>
+            <div class="wave-bar"></div><div class="wave-bar"></div><div class="wave-bar"></div>
+            <div class="wave-bar"></div>
+          </div>
+          <div class="transcribed-box" id="transcribedBox">
+            <span class="placeholder">👆 กดปุ่มแล้วพูดคำตอบของคุณ</span>
+          </div>
+        </div>
+        <div id="analysisTag" style="display:none">
+          <div class="analysis-tag" id="analysisTagText"></div>
+        </div>
+      </div>
+
+      <div class="action-row">
+        <button class="btn-secondary" id="prevBtn" onclick="prevQuestion()" style="display:none">← ย้อนกลับ</button>
+        <button class="btn-primary" id="nextBtn" onclick="nextQuestion()" disabled>ถัดไป →</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="resultSection" class="result-hidden">
+    <div class="result-header fade-in">
+      <div class="result-emoji" id="resultEmoji">🌱</div>
+      <div class="result-level" id="resultLevel"></div>
+    </div>
+    <div class="scores-row fade-in">
+      <div class="score-box">
+        <div class="score-box-num" id="scorePhq" style="color:var(--accent2)">—</div>
+        <div class="score-box-label">คะแนน PHQ-9<br/>(0–27)</div>
+      </div>
+      <div class="score-box">
+        <div class="score-box-num" id="scoreVoice" style="color:var(--orange)">—</div>
+        <div class="score-box-label">โทนเสียง<br/>ซึมเศร้า %</div>
+      </div>
+      <div class="score-box">
+        <div class="score-box-num" id="scoreCombined" style="color:var(--red)">—</div>
+        <div class="score-box-label">คะแนนรวม<br/>(combined)</div>
+      </div>
+    </div>
+    <div class="result-card heal-card fade-in">
+      <div class="result-card-title">💜 ข้อความถึงคุณ</div>
+      <div class="result-card-body" id="healingMessage">กำลังสร้างข้อความ...</div>
+    </div>
+    <div class="result-card rec-card fade-in">
+      <div class="result-card-title">📋 คำแนะนำ</div>
+      <div class="result-card-body" id="recommendation"></div>
+      <div id="hotlineBox" style="display:none" class="hotline-box">
+        <div class="hotline-num">1323</div>
+        <div class="hotline-text">สายด่วนสุขภาพจิต<br/>เปิด 24 ชั่วโมง ทุกวัน ไม่มีวันหยุด</div>
+      </div>
+    </div>
+    <button class="btn-restart" onclick="restartQuiz()">🔄 ทำแบบทดสอบใหม่อีกครั้ง</button>
+  </div>
+</div>
+
+<script>
+const API_BASE = window.location.origin;
+const QUESTIONS = [
+  "เบื่อ ทำอะไร ๆ ก็ไม่เพลิดเพลิน",
+  "ไม่สบายใจ ซึมเศร้า หรือท้อแท้",
+  "หลับยาก หรือหลับ ๆ ตื่น ๆ หรือหลับมากไป",
+  "เหนื่อยง่าย หรือไม่ค่อยมีแรง",
+  "เบื่ออาหาร หรือกินมากเกินไป",
+  "รู้สึกไม่ดีกับตัวเอง คิดว่าตัวเองล้มเหลว หรือเป็นคนทำให้ตัวเอง หรือครอบครัวผิดหวัง",
+  "สมาธิไม่ดีเวลาทำอะไร เช่น ดูโทรทัศน์ ฟังวิทยุ หรือทำงานที่ต้องใช้ความตั้งใจ",
+  "พูดหรือทำอะไรช้าจนคนอื่นมองเห็น หรือกระสับกระส่ายจนท่านอยู่ไม่นิ่งเหมือนเคย",
+  "คิดทำร้ายตนเอง หรือคิดว่าถ้าตาย ๆ ไปเสียคงจะดี",
+];
+const ANSWERS = [
+  { label:"ไม่เลย",       score:0, emoji:"😊" },
+  { label:"บางวัน",       score:1, emoji:"😐" },
+  { label:"มากกว่าครึ่ง", score:2, emoji:"😔" },
+  { label:"แทบทุกวัน",   score:3, emoji:"😢" },
+];
+
+let currentQ=0, scores=new Array(9).fill(null),
+    audioBlobs=new Array(9).fill(null),
+    // audioResults[q] = [] เก็บผล classify ทุก clip ของข้อนั้น
+    audioResults=Array.from({length:9}, ()=>[]),
+    mediaRecorder=null, audioChunks=[], isRecording=false, _cd=null;
+
+window.onload = () => { buildDots(); renderQuestion(0); };
+
+function buildDots() {
+  const c = document.getElementById('progressDots'); c.innerHTML='';
+  QUESTIONS.forEach((_,i) => {
+    const d=document.createElement('div');
+    d.className='progress-dot'+(i===0?' active':''); d.id=`dot-${i}`; c.appendChild(d);
+  });
+}
+
+function renderQuestion(idx) {
+  currentQ = idx;
+  document.getElementById('questionNum').textContent   = `ข้อที่ ${idx+1}`;
+  document.getElementById('questionText').textContent  = QUESTIONS[idx];
+  document.getElementById('progressLabel').textContent = `ข้อที่ ${idx+1} / ${QUESTIONS.length}`;
+  const pct = Math.round((idx/QUESTIONS.length)*100);
+  document.getElementById('progressPct').textContent   = pct+'%';
+  document.getElementById('progressFill').style.width  = pct+'%';
+  for(let i=0;i<QUESTIONS.length;i++)
+    document.getElementById(`dot-${i}`).className='progress-dot'+(i<idx?' done':i===idx?' active':'');
+
+  const chips=document.getElementById('answersChips'); chips.innerHTML='';
+  ANSWERS.forEach((a,ai)=>{
+    const chip=document.createElement('div');
+    chip.className='answer-chip'+(scores[idx]===a.score?' highlighted':'');
+    chip.id=`chip-${ai}`;
+    chip.innerHTML=`<span class="chip-score">${a.score}</span><span>${a.emoji} ${a.label}</span>`;
+    chips.appendChild(chip);
+  });
+
+  document.getElementById('prevBtn').style.display = idx>0?'block':'none';
+  updateNextBtn(); resetRecordUI();
+
+  document.getElementById('questionCard').classList.remove('fade-in');
+  void document.getElementById('questionCard').offsetWidth;
+  document.getElementById('questionCard').classList.add('fade-in');
+
+  if(audioResults[idx] && audioResults[idx].length > 0) {
+    const clips = audioResults[idx];
+    const avgProb = clips.reduce((s,r)=>s+(r.depression_probability||0),0)/clips.length;
+    const prob = Math.round(avgProb*100);
+    document.getElementById('analysisTagText').textContent=
+      `🎙️ โทนเสียงเฉลี่ย ${clips.length} clip: ซึมเศร้า ${prob}%`;
+    document.getElementById('analysisTag').style.display='block';
+  }
+  if(scores[idx]!==null) {
+    document.getElementById('transcribedBox').innerHTML='<span>✅ บันทึกคำตอบแล้ว — อัดอีกครั้งเพื่อเปลี่ยน</span>';
+    document.getElementById('transcribedBox').classList.add('has-text');
+    document.getElementById('recordLabel').textContent='🔄 อัดอีกครั้ง';
+  }
+}
+
+function updateNextBtn() {
+  const btn=document.getElementById('nextBtn'), ready=scores[currentQ]!==null;
+  btn.disabled=!ready;
+  btn.textContent=currentQ===QUESTIONS.length-1?'📊 ดูผล':'ถัดไป →';
+}
+
+function selectAnswer(score) {
+  scores[currentQ]=score;
+  ANSWERS.forEach((a,ai)=>{ const c=document.getElementById(`chip-${ai}`); if(c) c.className='answer-chip'+(a.score===score?' highlighted':''); });
+  updateNextBtn();
+}
+function highlightAnswer(label) { const i=ANSWERS.findIndex(a=>a.label===label); if(i>=0) selectAnswer(ANSWERS[i].score); }
+
+function nextQuestion() {
+  if(scores[currentQ]===null) {
+    showToast('🎙️ กรุณาอัดเสียงตอบคำถามก่อนนะครับ');
+    const b=document.getElementById('recordBtn'); b.classList.add('pulse-hint'); setTimeout(()=>b.classList.remove('pulse-hint'),1500); return;
+  }
+  if(currentQ<QUESTIONS.length-1) renderQuestion(currentQ+1); else submitQuiz();
+}
+function prevQuestion() { if(currentQ>0) renderQuestion(currentQ-1); }
+
+// ─── Recording ────────────────────────────────────────────────────
+async function toggleRecord() { if(isRecording) stopRecording(); else await startRecording(); }
+
+async function startRecording() {
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ audio:true });
+    audioChunks = [];
+    mediaRecorder = new MediaRecorder(stream, { mimeType:'audio/webm' });
+    mediaRecorder.ondataavailable = e => { if(e.data.size>0) audioChunks.push(e.data); };
+    mediaRecorder.onstop = async () => {
+      const blob = new Blob(audioChunks, { type:'audio/webm' });
+      audioBlobs[currentQ] = blob;
+      stream.getTracks().forEach(t=>t.stop());
+      await processRecording(blob);
+    };
+    mediaRecorder.start(100);
+    isRecording = true;
+
+    document.getElementById('recordBtn').classList.add('recording');
+    document.getElementById('waveform').classList.add('active');
+    document.getElementById('transcribedBox').innerHTML='<span class="placeholder">🎙️ กำลังฟัง...</span>';
+    document.getElementById('transcribedBox').classList.remove('has-text');
+
+    // ── countdown 10 วินาที ──────────────────────────────────
+    const MAX=10; let rem=MAX;
+    const barEl=document.getElementById('countdownBar'), wrapEl=document.getElementById('countdownWrap');
+    wrapEl.classList.add('active');
+    barEl.style.transition='none'; barEl.style.width='100%';
+    void barEl.offsetWidth;
+    barEl.style.transition=`width ${MAX}s linear`; barEl.style.width='0%';
+
+    document.getElementById('recordLabel').textContent=`กำลังอัด... หยุดอัตโนมัติใน ${rem}s`;
+    _cd = setInterval(()=>{
+      rem--;
+      if(rem<=0){ clearInterval(_cd); _cd=null; if(isRecording) stopRecording(); }
+      else document.getElementById('recordLabel').textContent=`กำลังอัด... หยุดใน ${rem}s (หรือกดหยุดเอง)`;
+    }, 1000);
+
+  } catch(err) { showToast('❌ ไม่สามารถเข้าถึงไมโครโฟนได้ กรุณาอนุญาตการใช้งาน'); }
+}
+
+function stopRecording() {
+  if(_cd){ clearInterval(_cd); _cd=null; }
+  document.getElementById('countdownWrap').classList.remove('active');
+  if(mediaRecorder && isRecording) {
+    mediaRecorder.stop(); isRecording=false;
+    document.getElementById('recordBtn').classList.remove('recording');
+    document.getElementById('recordLabel').textContent='⏳ กำลังประมวลผล...';
+    document.getElementById('waveform').classList.remove('active');
+  }
+}
+
+async function processRecording(blob) {
+  showLoading('🔍 กำลังวิเคราะห์เสียงและข้อความ...');
+  async function fw(url,opts,ms=30000){
+    const c=new AbortController(), id=setTimeout(()=>c.abort(),ms);
+    try{ const r=await fetch(url,{...opts,signal:c.signal}); clearTimeout(id); return r; }
+    catch(e){ clearTimeout(id); throw e; }
+  }
+  try {
+    const fd1=new FormData(); fd1.append('audio',blob,'recording.webm');
+    const fd2=new FormData(); fd2.append('audio',blob,'recording.webm');
+    const [tRes,cRes]=await Promise.allSettled([
+      fw(`${API_BASE}/api/transcribe`,    {method:'POST',body:fd1},30000),
+      fw(`${API_BASE}/api/classify-audio`,{method:'POST',body:fd2},30000),
+    ]);
+    let td=null,cd=null;
+    if(tRes.status==='fulfilled'&&tRes.value.ok) td=await tRes.value.json();
+    if(cRes.status==='fulfilled'&&cRes.value.ok) cd=await cRes.value.json();
+    hideLoading();
+
+    const box=document.getElementById('transcribedBox');
+    if(td?.transcribed_text){ box.innerHTML=`<span>💬 "${td.transcribed_text}"</span>`; box.classList.add('has-text'); }
+    else { box.innerHTML='<span class="placeholder">ไม่ได้ยินชัด ลองอัดใหม่อีกครั้ง</span>'; }
+
+    if(td?.mapped_answer){ highlightAnswer(td.mapped_answer); showToast(`✅ จับได้: "${td.mapped_answer}"`); }
+    else if(td?.transcribed_text) showToast('⚠️ ไม่แน่ใจคำตอบ ลองพูดให้ชัดขึ้น เช่น "บางวัน"');
+
+    if(cd){
+      // push ผลของ clip นี้เข้า array ของข้อนั้น
+      audioResults[currentQ].push(cd);
+      const clips = audioResults[currentQ];
+      const avgProb = clips.reduce((s,r)=>s+(r.depression_probability||0),0)/clips.length;
+      const prob = Math.round(avgProb*100);
+      document.getElementById('analysisTagText').textContent=
+        `🎙️ โทนเสียงเฉลี่ย ${clips.length} clip: ซึมเศร้า ${prob}%`;
+      document.getElementById('analysisTag').style.display='block';
+    }
+  } catch(err) { hideLoading(); console.error(err); showToast('⚠️ เกิดข้อผิดพลาด กรุณาลองอัดใหม่'); }
+  document.getElementById('recordBtn').classList.remove('recording');
+  document.getElementById('recordLabel').textContent='🔄 อัดอีกครั้ง';
+}
+
+function resetRecordUI() {
+  if(_cd){ clearInterval(_cd); _cd=null; }
+  isRecording=false;
+  if(mediaRecorder&&mediaRecorder.state!=='inactive'){ try{mediaRecorder.stop();}catch(e){} }
+  document.getElementById('countdownWrap').classList.remove('active');
+  document.getElementById('recordBtn').classList.remove('recording');
+  document.getElementById('recordLabel').textContent='🎙️ กดเพื่ออัดเสียง';
+  document.getElementById('waveform').classList.remove('active');
+  document.getElementById('transcribedBox').innerHTML='<span class="placeholder">👆 กดปุ่มแล้วพูดคำตอบของคุณ</span>';
+  document.getElementById('transcribedBox').classList.remove('has-text');
+  // ไม่ซ่อน analysisTag — renderQuestion จะจัดการ restore เอง
+}
+
+// ─── Submit ───────────────────────────────────────────────────────
+async function submitQuiz() {
+  showLoading('📊 กำลังวิเคราะห์ผลทั้งหมด...');
+  try {
+    // คำนวณ avg depression_probability ของแต่ละข้อ (จากทุก clip)
+    // แล้วส่งเป็น flat array เพื่อให้ backend คำนวณ combined score
+    const flatAudio = audioResults
+      .map((clips, qi) => {
+        if(!clips || clips.length===0) return null;
+        const avg = clips.reduce((s,r)=>s+(r.depression_probability||0),0)/clips.length;
+        return { question_idx: qi, depression_probability: avg, clip_count: clips.length };
+      })
+      .filter(Boolean);
+
+    const ctrl=new AbortController(), tid=setTimeout(()=>ctrl.abort(),60000);
+    const res=await fetch(`${API_BASE}/api/analyze`,{
+      method:'POST', headers:{'Content-Type':'application/json'}, signal:ctrl.signal,
+      body:JSON.stringify({ phq_scores:scores, audio_results:flatAudio }),
+    });
+    clearTimeout(tid);
+    if(!res.ok){ const t=await res.text(); console.error('API error:',res.status,t); throw new Error('API '+res.status); }
+    hideLoading(); showResult(await res.json());
+  } catch(err) {
+    console.error('submitQuiz error:',err.message); hideLoading();
+    showResult(localFallbackResult(scores.reduce((a,b)=>a+(b||0),0)));
+  }
+}
+
+function localFallbackResult(total) {
+  const levels=[
+    {max:4, level:'minimal',           label:'ปกติ / อาการน้อยมาก',         emoji:'🌱',  color:'#059669'},
+    {max:9, level:'mild',              label:'ซึมเศร้าระดับน้อย',            emoji:'🌤️', color:'#d97706'},
+    {max:14,level:'moderate',          label:'ซึมเศร้าระดับปานกลาง',         emoji:'⛅',  color:'#ea580c'},
+    {max:19,level:'moderately_severe', label:'ซึมเศร้าระดับค่อนข้างรุนแรง', emoji:'🌧️', color:'#dc2626'},
+    {max:27,level:'severe',            label:'ซึมเศร้าระดับรุนแรง',          emoji:'⛈️', color:'#b91c1c'},
+  ];
+  const lv=levels.find(l=>total<=l.max)||levels[levels.length-1];
+  // คำนวณ avg จาก array-of-arrays: avg ต่อข้อก่อน แล้ว avg รวม
+  const perQ = audioResults
+    .map(clips => clips.length>0 ? clips.reduce((s,r)=>s+(r.depression_probability||0),0)/clips.length : null)
+    .filter(v=>v!==null);
+  const vp = perQ.length>0 ? perQ.reduce((s,v)=>s+v,0)/perQ.length : 0;
+  return {
+    phq_total:total, avg_depression_prob_from_voice:vp,
+    combined_score:(total/27)*0.7+vp*0.3, level_info:lv,
+    recommendation:'⚠️ ไม่สามารถเชื่อมต่อ API ได้ กรุณาติดต่อผู้เชี่ยวชาญสุขภาพจิตโดยตรง\n📞 สายด่วนสุขภาพจิต 1323',
+    healing_message:'ขอบคุณที่กล้าดูแลสุขภาพจิตของตัวเอง 💜 การรับรู้ความรู้สึกของตัวเองคือก้าวแรกที่สำคัญที่สุดแล้ว\n\n✨ "ความกล้าไม่ใช่การไม่กลัว แต่คือการลุกขึ้นแม้จะกลัว"',
+    is_depressed:total>=10,
+  };
+}
+
+function showResult(data) {
+  document.getElementById('quizSection').style.display='none';
+  const rs=document.getElementById('resultSection'); rs.classList.remove('result-hidden');
+  const lv=data.level_info;
+  document.getElementById('resultEmoji').textContent=lv.emoji||'🌱';
+  document.getElementById('resultLevel').textContent=lv.label;
+  document.getElementById('resultLevel').style.color=lv.color||'var(--accent2)';
+  const vp=Math.round((data.avg_depression_prob_from_voice||0)*100);
+  document.getElementById('scorePhq').textContent=data.phq_total;
+  document.getElementById('scoreVoice').textContent=vp+'%';
+  document.getElementById('scoreCombined').textContent=Math.round((data.combined_score||0)*100)+'%';
+  document.getElementById('scoreVoice').style.color=vp>=60?'var(--red)':vp>=40?'var(--orange)':'var(--green)';
+  document.getElementById('healingMessage').textContent=data.healing_message||'';
+  document.getElementById('recommendation').textContent=data.recommendation||'';
+  if(['moderately_severe','severe'].includes(lv.level)) document.getElementById('hotlineBox').style.display='flex';
+  rs.classList.add('fade-in'); window.scrollTo({top:0,behavior:'smooth'});
+}
+
+function restartQuiz() {
+  scores=new Array(9).fill(null); audioBlobs=new Array(9).fill(null);
+  audioResults=Array.from({length:9}, ()=>[]);
+  document.getElementById('resultSection').classList.add('result-hidden');
+  document.getElementById('quizSection').style.display='';
+  document.getElementById('hotlineBox').style.display='none';
+  buildDots(); renderQuestion(0); window.scrollTo({top:0,behavior:'smooth'});
+}
+
+function showLoading(t='กำลังโหลด...'){document.getElementById('loadingText').textContent=t;document.getElementById('loadingOverlay').classList.add('active');}
+function hideLoading(){document.getElementById('loadingOverlay').classList.remove('active');}
+function showToast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),3500);}
+</script>
+</body>
+</html>
